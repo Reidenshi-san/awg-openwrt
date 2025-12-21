@@ -93,7 +93,6 @@ jobs:
         run: |
           echo "pkgarch: ${{ matrix.build_env.pkgarch}}, target:${{ matrix.build_env.target}}, subtarget: ${{ matrix.build_env.subtarget}}"
 
-          # Get the actual SDK filename from the directory listing
           SDK_FILE=$(curl -s "https://downloads.openwrt.org/releases/${{ matrix.build_env.tag }}/targets/${{ matrix.build_env.target}}/${{ matrix.build_env.subtarget}}/" | grep -o "openwrt-sdk-${{ matrix.build_env.tag }}-${{ matrix.build_env.target}}-${{ matrix.build_env.subtarget}}_gcc-[^\"]*_musl[^\"]*\.Linux-x86_64\.tar\.[xz|zst]*" | head -n1)
           
           if [ -z "$SDK_FILE" ]; then
@@ -106,7 +105,6 @@ jobs:
           
           wget "$SDK_DOWNLOAD_URL"
           
-          # Extract based on file extension
           if [[ "$SDK_FILE" == *.tar.zst ]]; then
             tar --zstd -xf "$SDK_FILE"
           elif [[ "$SDK_FILE" == *.tar.xz ]]; then
@@ -120,29 +118,22 @@ jobs:
 
       - name: Setup SDK and feeds
         run: |
-          # Find SDK directory
           SDK_DIR=$(find . -maxdepth 1 -name "openwrt-sdk-*" -type d | head -n1)
-          
           if [ -z "$SDK_DIR" ]; then
             echo "SDK directory not found"
             exit 1
           fi
           
-          # Get absolute paths
           WORKSPACE_DIR=$(pwd)
-          
           cd "$SDK_DIR"
           
-          # Update feeds to include LuCI
           ./scripts/feeds update -a
           ./scripts/feeds install -a
           
-          # Copy current repository packages directly to package directory
           cp -r "$WORKSPACE_DIR/kmod-amneziawg" package/
           cp -r "$WORKSPACE_DIR/amneziawg-tools" package/
           cp -r "$WORKSPACE_DIR/luci-proto-amneziawg" package/
           
-          # Configure packages to build
           echo "CONFIG_PACKAGE_kmod-amneziawg=m" > .config
           echo "CONFIG_PACKAGE_amneziawg-tools=y" >> .config
           echo "CONFIG_PACKAGE_luci-proto-amneziawg=y" >> .config
@@ -152,43 +143,42 @@ jobs:
 
       - name: Build AmneziaWG packages
         run: |
-          # Find SDK directory
           SDK_DIR=$(find . -maxdepth 1 -name "openwrt-sdk-*" -type d | head -n1)
           cd "$SDK_DIR"
 
           echo "Building AmneziaWG packages..."
 
-          # Build kmod-amneziawg (kernel module)
-          echo "Building kmod-amneziawg..."
           make package/kmod-amneziawg/{download,prepare} V=s || true
           make package/kmod-amneziawg/compile V=s || true
 
-          # Build luci-proto-amneziawg (web interface)
-          echo "Building luci-proto-amneziawg..."
           make package/luci-proto-amneziawg/{download,prepare} V=s
           make package/luci-proto-amneziawg/compile V=s
 
-          # Build amneziawg-tools (userspace tools)
-          echo "Building amneziawg-tools..."
           make package/amneziawg-tools/{download,prepare} V=s
           make package/amneziawg-tools/compile V=s
           
           echo "Build completed. Checking for built packages..."
-          find bin/ -name "*.apk" | grep -E "(amneziawg|luci-proto-amneziawg|luci-i18n-amneziawg)" | head -10
+          find bin/ -name "*.ipk" -o -name "*.apk" | grep -E "(amneziawg|luci-proto-amneziawg|luci-i18n-amneziawg)" | head -10
 
       - name: Prepare artifacts
         run: |
-          # Find SDK directory
           SDK_DIR=$(find . -maxdepth 1 -name "openwrt-sdk-*" -type d | head -n1)
-          
           mkdir -p awgrelease
           postfix="v${{ matrix.build_env.tag }}_${{ matrix.build_env.pkgarch}}_${{ matrix.build_env.target}}_${{ matrix.build_env.subtarget}}"
-          
-          # Copy built packages
-          find "$SDK_DIR/bin/packages" -name "amneziawg-tools_*.apk" -exec cp {} awgrelease/amneziawg-tools_${postfix}.apk \; || echo "amneziawg-tools package not found"
-          find "$SDK_DIR/bin/packages" -name "luci-proto-amneziawg_*.apk" -exec cp {} awgrelease/luci-proto-amneziawg_${postfix}.apk \; || echo "luci-proto-amneziawg package not found"
-          find "$SDK_DIR/bin/packages" -name "luci-i18n-amneziawg-ru_*.apk" -exec cp {} awgrelease/luci-i18n-amneziawg-ru_${postfix}.apk \; || echo "luci-i18n-amneziawg-ru package not found"
-          find "$SDK_DIR/bin/targets" -name "kmod-amneziawg_*.apk" -exec cp {} awgrelease/kmod-amneziawg_${postfix}.apk \; || echo "kmod-amneziawg package not found"
+
+          if [[ "${{ matrix.build_env.tag }}" =~ ^25\. ]]; then
+              # OpenWrt 25.x → только apk пакеты ваших модулей
+              find "$SDK_DIR/bin/packages" -name "amneziawg-tools_*.apk" -exec cp {} awgrelease/amneziawg-tools_${postfix}.apk \;
+              find "$SDK_DIR/bin/packages" -name "luci-proto-amneziawg_*.apk" -exec cp {} awgrelease/luci-proto-amneziawg_${postfix}.apk \;
+              find "$SDK_DIR/bin/packages" -name "luci-i18n-amneziawg-ru_*.apk" -exec cp {} awgrelease/luci-i18n-amneziawg-ru_${postfix}.apk \;
+              find "$SDK_DIR/bin/targets" -name "kmod-amneziawg_*.apk" -exec cp {} awgrelease/kmod-amneziawg_${postfix}.apk \;
+          else
+              # Старые версии → ipk пакеты ваших модулей
+              find "$SDK_DIR/bin/packages" -name "amneziawg-tools_*.ipk" -exec cp {} awgrelease/amneziawg-tools_${postfix}.ipk \;
+              find "$SDK_DIR/bin/packages" -name "luci-proto-amneziawg_*.ipk" -exec cp {} awgrelease/luci-proto-amneziawg_${postfix}.ipk \;
+              find "$SDK_DIR/bin/packages" -name "luci-i18n-amneziawg-ru_*.ipk" -exec cp {} awgrelease/luci-i18n-amneziawg-ru_${postfix}.ipk \;
+              find "$SDK_DIR/bin/targets" -name "kmod-amneziawg_*.ipk" -exec cp {} awgrelease/kmod-amneziawg_${postfix}.ipk \;
+          fi
           
           echo "Built packages:"
           ls -la awgrelease/
@@ -196,5 +186,8 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          files: awgrelease/*.apk
+          files: |
+            awgrelease/*.ipk
+            awgrelease/*.apk
           tag_name: v${{ matrix.build_env.tag }}
+          token: ${{ secrets.GITHUB_TOKEN }}

@@ -168,16 +168,20 @@ jobs:
 
           if [[ "${{ matrix.build_env.tag }}" =~ ^25\. ]]; then
               # OpenWrt 25.x → только apk пакеты ваших модулей
-              find "$SDK_DIR/bin/packages" -name "amneziawg-tools_*.apk" -exec cp {} awgrelease/amneziawg-tools_${postfix}.apk \;
-              find "$SDK_DIR/bin/packages" -name "luci-proto-amneziawg_*.apk" -exec cp {} awgrelease/luci-proto-amneziawg_${postfix}.apk \;
-              find "$SDK_DIR/bin/packages" -name "luci-i18n-amneziawg-ru_*.apk" -exec cp {} awgrelease/luci-i18n-amneziawg-ru_${postfix}.apk \;
-              find "$SDK_DIR/bin/targets" -name "kmod-amneziawg_*.apk" -exec cp {} awgrelease/kmod-amneziawg_${postfix}.apk \;
+              find "$SDK_DIR/bin/packages" -type f -name "*.apk" | grep -E "amneziawg-tools|luci-proto-amneziawg|luci-i18n-amneziawg|kmod-amneziawg" | while read f; do
+                  base=$(basename "$f")
+                  ext="${base##*.}"
+                  name="${base%%_*}"
+                  cp "$f" "awgrelease/${name}_${postfix}.${ext}"
+              done
           else
               # Старые версии → ipk пакеты ваших модулей
-              find "$SDK_DIR/bin/packages" -name "amneziawg-tools_*.ipk" -exec cp {} awgrelease/amneziawg-tools_${postfix}.ipk \;
-              find "$SDK_DIR/bin/packages" -name "luci-proto-amneziawg_*.ipk" -exec cp {} awgrelease/luci-proto-amneziawg_${postfix}.ipk \;
-              find "$SDK_DIR/bin/packages" -name "luci-i18n-amneziawg-ru_*.ipk" -exec cp {} awgrelease/luci-i18n-amneziawg-ru_${postfix}.ipk \;
-              find "$SDK_DIR/bin/targets" -name "kmod-amneziawg_*.ipk" -exec cp {} awgrelease/kmod-amneziawg_${postfix}.ipk \;
+              find "$SDK_DIR/bin/packages" -type f -name "*.ipk" | grep -E "amneziawg-tools|luci-proto-amneziawg|luci-i18n-amneziawg|kmod-amneziawg" | while read f; do
+                  base=$(basename "$f")
+                  ext="${base##*.}"
+                  name="${base%%_*}"
+                  cp "$f" "awgrelease/${name}_${postfix}.${ext}"
+              done
           fi
           
           echo "Built packages:"

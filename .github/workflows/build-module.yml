@@ -170,24 +170,21 @@ jobs:
               # OpenWrt 25.x → apk пакеты
               find "$SDK_DIR/bin/packages" -type f -name "*.apk" | grep -E "amneziawg-tools|luci-proto-amneziawg|luci-i18n-amneziawg" | while read f; do
                   base=$(basename "$f")
-                  ext="${base##*.}"
-                  name="${base%%-*}"
-                  cp "$f" "awgrelease/${name}_${postfix}.${ext}"
+                  name="${base%.apk}"
+                  cp "$f" "awgrelease/${name}_${postfix}.apk"
               done
               # kmod-amneziawg
               find "$SDK_DIR/bin/targets" -type f -name "kmod-amneziawg*.apk" | while read f; do
                   base=$(basename "$f")
-                  ext="${base##*.}"
-                  name="${base%%-*}"
-                  cp "$f" "awgrelease/${name}_${postfix}.${ext}"
+                  name="${base%.apk}"
+                  cp "$f" "awgrelease/${name}_${postfix}.apk"
               done
           else
               # Старые версии → ipk
               find "$SDK_DIR/bin/packages" -type f -name "*.ipk" | grep -E "amneziawg-tools|luci-proto-amneziawg|luci-i18n-amneziawg|kmod-amneziawg" | while read f; do
                   base=$(basename "$f")
-                  ext="${base##*.}"
-                  name="${base%%_*}"
-                  cp "$f" "awgrelease/${name}_${postfix}.${ext}"
+                  name="${base%.ipk}"
+                  cp "$f" "awgrelease/${name}_${postfix}.ipk"
               done
           fi
           

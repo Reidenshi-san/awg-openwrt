@@ -12,18 +12,17 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'OpenWRT version (e.g., 24.10.5)'
+        description: 'OpenWRT version (e.g., 24.10.3)'
         required: true
         type: string
       targets:
-        description: 'Targets (comma-separated, optional)'
-        required: false
+        description: 'Targets (comma-separated, e.g., "stm32,ramips")'
+        required: true
         type: string
       subtargets:
-        description: 'Subtargets (comma-separated, optional)'
-        required: false
+        description: 'Subtargets (comma-separated, e.g., "stm32mp1,mt7621")'
+        required: true
         type: string
-
 
 jobs:
   generate-config:
@@ -39,22 +38,16 @@ jobs:
         with:
           node-version: '20.16.0'
 
-      - name: Get OpenWRT version from inputs or tag
+      - name: Get OpenWRT version from tag
+        id: get_version
         run: |
-          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
             echo "VERSION=${{ inputs.version }}" >> $GITHUB_ENV
-
-            if [ -n "${{ inputs.targets }}" ]; then
-              echo "TARGETS=${{ inputs.targets }}" >> $GITHUB_ENV
-            fi
-
-            if [ -n "${{ inputs.subtargets }}" ]; then
-              echo "SUBTARGETS=${{ inputs.subtargets }}" >> $GITHUB_ENV
-            fi
-
-          elif [ "${{ github.event_name }}" = "workflow_call" ]; then
-            echo "VERSION=${{ inputs.tag_name }}" >> $GITHUB_ENV
-
+            echo "TARGETS=${{ inputs.targets }}" >> $GITHUB_ENV
+            echo "SUBTARGETS=${{ inputs.subtargets }}" >> $GITHUB_ENV
+          elif [ "${{ github.event_name }}" == "workflow_call" ]; then
+            VERSION="${{ inputs.tag_name }}"
+            echo "VERSION=${VERSION#v}" >> $GITHUB_ENV
           else
             echo "VERSION=${GITHUB_REF/refs\/tags\/v/}" >> $GITHUB_ENV
           fi
@@ -197,17 +190,17 @@ jobs:
           find "$SDK_DIR/bin/packages" -name "luci-proto-amneziawg*.apk" -exec cp {} awgrelease/luci-proto-amneziawg_${postfix}.apk \; || echo "luci-proto-amneziawg package not found"
           find "$SDK_DIR/bin/packages" -name "luci-i18n-amneziawg-ru*.apk" -exec cp {} awgrelease/luci-i18n-amneziawg-ru_${postfix}.apk \; || echo "luci-i18n-amneziawg-ru package not found"
           find "$SDK_DIR/bin/targets" -name "kmod-amneziawg*.apk" -exec cp {} awgrelease/kmod-amneziawg_${postfix}.apk \; || echo "kmod-amneziawg package not found"
-          
+
           find "$SDK_DIR/bin/packages" -name "amneziawg-tools_*.ipk" -exec cp {} awgrelease/amneziawg-tools_${postfix}.ipk \; || echo "amneziawg-tools package not found"
           find "$SDK_DIR/bin/packages" -name "luci-proto-amneziawg_*.ipk" -exec cp {} awgrelease/luci-proto-amneziawg_${postfix}.ipk \; || echo "luci-proto-amneziawg package not found"
           find "$SDK_DIR/bin/packages" -name "luci-i18n-amneziawg-ru_*.ipk" -exec cp {} awgrelease/luci-i18n-amneziawg-ru_${postfix}.ipk \; || echo "luci-i18n-amneziawg-ru package not found"
           find "$SDK_DIR/bin/targets" -name "kmod-amneziawg_*.ipk" -exec cp {} awgrelease/kmod-amneziawg_${postfix}.ipk \; || echo "kmod-amneziawg package not found"
-          
+
           echo "Built packages:"
           ls -la awgrelease/
 
       - name: Release
         uses: softprops/action-gh-release@v1
         with:
-          files: awgrelease/*.ipk
+          files: awgrelease/*
           tag_name: v${{ matrix.build_env.tag }}

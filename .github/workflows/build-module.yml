@@ -181,6 +181,7 @@ jobs:
           make package/amneziawg-tools/compile V=s
           
           echo "Build completed. Checking for built packages..."
+          find bin/ -name "*.apk" | grep -E "(amneziawg|luci-proto-amneziawg|luci-i18n-amneziawg)" | head -10
           find bin/ -name "*.ipk" | grep -E "(amneziawg|luci-proto-amneziawg|luci-i18n-amneziawg)" | head -10
 
       - name: Prepare artifacts

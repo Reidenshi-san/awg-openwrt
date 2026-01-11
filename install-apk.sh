@@ -72,9 +72,8 @@ apk update
 # ===== загрузка пакетов =====
 for p in $PKGS; do
     echo "--- Downloading $p"
-    wget "$BASE/$p" || {
+    wget -O "$p" "$BASE/$p" || {
         echo "❌ Failed to download $p"
-        echo "Check that release $TAG exists and contains required files"
         exit 1
     }
 done
@@ -110,4 +109,4 @@ case "$ANSWER" in
         echo "ℹ️  Please reboot the router manually later to activate AmneziaWG in LuCI:"
         echo "    reboot"
         ;;
-e
+esac

@@ -13,8 +13,8 @@ RELEASE_TAG="v$OPENWRT_VERSION"
 
 echo "OpenWrt version: $OPENWRT_VERSION"
 echo "Release tag:     $RELEASE_TAG"
-echo "Architecture:   $OPENWRT_TARGET"
-echo "Target:         $OPENWRT_TARGET"
+echo "Architecture:    $ARCH"
+echo "Target:          $OPENWRT_TARGET"
 echo
 
 # Проверка таргета

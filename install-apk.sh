@@ -11,6 +11,11 @@ command -v apk >/dev/null 2>&1 || {
     exit 1
 }
 
+command -v wget >/dev/null 2>&1 || {
+    echo "❌ wget not found — required to download packages"
+    exit 1
+}
+
 # ===== определение версии OpenWrt =====
 . /etc/openwrt_release || {
     echo "❌ Cannot determine OpenWrt version"
@@ -44,6 +49,15 @@ amneziawg-tools_${TAG}__${ARCH}.apk
 luci-proto-amneziawg_${TAG}__${ARCH}.apk
 luci-i18n-amneziawg-ru_${TAG}__${ARCH}.apk
 "
+
+# ===== проверка наличия релиза =====
+echo "== Checking if release $TAG exists..."
+if ! wget --spider -q "$BASE/kmod-amneziawg_${TAG}__${ARCH}.apk"; then
+    echo "❌ Release $TAG not found on GitHub."
+    echo "⚠️ Packages for OpenWrt $DISTRIB_RELEASE are not yet built."
+    echo "Please wait until the release is published or build them manually."
+    exit 1
+fi
 
 # ===== обновление индекса пакетов =====
 echo "== Updating package index =="

@@ -18,7 +18,7 @@ command -v wget >/dev/null 2>&1 || {
 
 # ===== определение версии OpenWrt =====
 . /etc/openwrt_release || {
-    echo "❌ Cannot determine OpenWrt version"
+    echo "❌ Cannot read /etc/openwrt_release"
     exit 1
 }
 
@@ -32,13 +32,19 @@ echo "== AmneziaWG installer =="
 echo "OpenWrt version: $DISTRIB_RELEASE"
 echo "Release tag:     $TAG"
 echo "Architecture:   $ARCH"
+echo "Target:         $DISTRIB_TARGET"
 echo
 
-# ===== защита от неподходящего устройства =====
-grep -qi mediatek /proc/cpuinfo || {
-    echo "❌ This script is intended for MediaTek devices only"
-    exit 1
-}
+# ===== проверка архитектуры через DISTRIB_TARGET =====
+case "$DISTRIB_TARGET" in
+    mediatek/filogic*)
+        echo "✅ MediaTek Filogic detected"
+        ;;
+    *)
+        echo "❌ This script is intended for MediaTek Filogic devices only"
+        exit 1
+        ;;
+esac
 
 cd /tmp
 
@@ -50,7 +56,7 @@ luci-proto-amneziawg_${TAG}__${ARCH}.apk
 luci-i18n-amneziawg-ru_${TAG}__${ARCH}.apk
 "
 
-# ===== проверка наличия релиза =====
+# ===== проверка наличия релиза на GitHub =====
 echo "== Checking if release $TAG exists..."
 if ! wget --spider -q "$BASE/kmod-amneziawg_${TAG}__${ARCH}.apk"; then
     echo "❌ Release $TAG not found on GitHub."
@@ -104,4 +110,4 @@ case "$ANSWER" in
         echo "ℹ️  Please reboot the router manually later to activate AmneziaWG in LuCI:"
         echo "    reboot"
         ;;
-esac
+e

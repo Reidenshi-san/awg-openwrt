@@ -1,91 +1,63 @@
 #!/bin/sh
+# AmneziaWG installer for OpenWrt (MediaTek Filogic)
+
 set -e
 
-# =========================
-# AmneziaWG installer (apk)
-# =========================
-
-# ===== базовые проверки =====
-command -v apk >/dev/null 2>&1 || {
-    echo "❌ apk not found — this script is for OpenWrt 25+"
-    exit 1
-}
-
-command -v wget >/dev/null 2>&1 || {
-    echo "❌ wget not found — required to download packages"
-    exit 1
-}
-
-# ===== определение версии OpenWrt =====
-. /etc/openwrt_release || {
-    echo "❌ Cannot read /etc/openwrt_release"
-    exit 1
-}
-
-TAG="v$DISTRIB_RELEASE"
-REPO="Reidenshi-san/awg-openwrt"
-BASE="https://github.com/$REPO/releases/download/$TAG"
-
-ARCH="mediatek_filogic"
-
 echo "== AmneziaWG installer =="
-echo "OpenWrt version: $DISTRIB_RELEASE"
-echo "Release tag:     $TAG"
-echo "Architecture:   $ARCH"
-echo "Target:         $DISTRIB_TARGET"
+
+# Получаем информацию о системе
+OPENWRT_VERSION=$(cat /etc/openwrt_release | grep DISTRIB_RELEASE | cut -d\' -f2)
+OPENWRT_TARGET=$(cat /etc/openwrt_release | grep DISTRIB_TARGET | cut -d\' -f2)
+ARCH=$(cat /etc/openwrt_release | grep DISTRIB_ARCH | cut -d\' -f2)
+RELEASE_TAG="v$OPENWRT_VERSION"
+
+echo "OpenWrt version: $OPENWRT_VERSION"
+echo "Release tag:     $RELEASE_TAG"
+echo "Architecture:   $OPENWRT_TARGET"
+echo "Target:         $OPENWRT_TARGET"
 echo
 
-# ===== проверка архитектуры через DISTRIB_TARGET =====
-case "$DISTRIB_TARGET" in
-    mediatek/filogic*)
-        echo "✅ MediaTek Filogic detected"
-        ;;
-    *)
-        echo "❌ This script is intended for MediaTek Filogic devices only"
-        exit 1
-        ;;
-esac
+# Проверка таргета
+if [ "$OPENWRT_TARGET" != "mediatek/filogic" ]; then
+    echo "❌ This script is intended for MediaTek Filogic devices only."
+    exit 1
+fi
+echo "✅ MediaTek Filogic detected"
 
-cd /tmp
+# Проверка, установлен ли уже AmneziaWG
+if apk info kmod-amneziawg >/dev/null 2>&1; then
+    echo "⚠️  AmneziaWG уже установлена. Пропускаем установку пакетов."
+    exit 0
+fi
 
-# ===== пакеты (ВАЖЕН ПОРЯДОК) =====
-PKGS="
-kmod-amneziawg_${TAG}__${ARCH}.apk
-amneziawg-tools_${TAG}__${ARCH}.apk
-luci-proto-amneziawg_${TAG}__${ARCH}.apk
-luci-i18n-amneziawg-ru_${TAG}__${ARCH}.apk
-"
-
-# ===== проверка наличия релиза на GitHub =====
-echo "== Checking if release $TAG exists..."
-if ! wget --spider -q "$BASE/kmod-amneziawg_${TAG}__${ARCH}.apk"; then
-    echo "❌ Release $TAG not found on GitHub."
-    echo "⚠️ Packages for OpenWrt $DISTRIB_RELEASE are not yet built."
-    echo "Please wait until the release is published or build them manually."
+# Проверка существования релиза на GitHub
+echo "== Checking if release $RELEASE_TAG exists..."
+RELEASE_URL="https://github.com/Reidenshi-san/awg-openwrt/releases/download/$RELEASE_TAG"
+if ! wget --spider "$RELEASE_URL/kmod-amneziawg_${OPENWRT_VERSION}__mediatek_filogic.apk" >/dev/null 2>&1; then
+    echo "❌ Release $RELEASE_TAG not found. Aborting."
     exit 1
 fi
 
-# ===== обновление индекса пакетов =====
+# Обновление индекса пакетов
 echo "== Updating package index =="
 apk update
 
-# ===== загрузка пакетов =====
-for p in $PKGS; do
-    echo "--- Downloading $p"
-    wget -O "$p" "$BASE/$p" || {
-        echo "❌ Failed to download $p"
-        exit 1
-    }
-done
+# Скачиваем и устанавливаем пакеты
+PACKAGES="
+kmod-amneziawg
+amneziawg-tools
+luci-proto-amneziawg
+luci-i18n-amneziawg-ru
+"
 
-# ===== установка пакетов (строго по порядку) =====
-for p in $PKGS; do
-    echo "--- Installing $p"
-    apk add --allow-untrusted "$p"
-done
+for pkg in $PACKAGES; do
+    APK_NAME="${pkg}_${OPENWRT_VERSION}__mediatek_filogic.apk"
+    echo "--- Downloading $APK_NAME"
+    wget -q --show-progress "$RELEASE_URL/$APK_NAME" -O "$APK_NAME"
 
-# ===== загрузка kernel module =====
-modprobe amneziawg || true
+    echo "--- Installing $APK_NAME"
+    apk add --allow-untrusted "$APK_NAME"
+done
 
 echo
 echo "✅ AmneziaWG installed successfully"
@@ -94,19 +66,11 @@ echo "⚠️  A reboot is required for AmneziaWG to appear in LuCI network inter
 echo "    Without reboot, AmneziaWG will NOT be visible or configurable in LuCI."
 echo
 
-# ===== интерактивный запрос на перезагрузку =====
-printf "🔄 Reboot router now? [y/N]: "
-read ANSWER
-
-case "$ANSWER" in
-    y|Y|yes|YES)
-        echo "⏳ Rebooting in 5 seconds..."
-        sleep 5
-        reboot
-        ;;
-    *)
-        echo
-        echo "ℹ️  Please reboot the router manually later to activate AmneziaWG in LuCI:"
-        echo "    reboot"
-        ;;
+read -p "🔄 Reboot router now? [y/N]: " answer
+case "$answer" in
+    y|Y) echo "⏳ Rebooting in 5 seconds..."
+         sleep 5
+         reboot
+         ;;
+    *) echo "Reboot skipped. You can reboot manually later." ;;
 esac

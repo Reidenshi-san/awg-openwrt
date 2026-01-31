@@ -49,12 +49,11 @@ trap cleanup EXIT
 
 spinner() {
     local pid=$1
-    local delay=0.2
     local spinstr='|/-\'
     while kill -0 $pid 2>/dev/null; do
         for i in $(seq 0 3); do
             echo -ne "\b${spinstr:$i:1}"
-            sleep $delay
+            sleep 1  # <- тут целая секунда
         done
     done
     echo -ne "\b"

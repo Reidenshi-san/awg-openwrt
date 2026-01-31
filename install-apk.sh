@@ -2,13 +2,22 @@
 # AmneziaWG installer for OpenWrt (MediaTek Filogic)
 set -e
 
-GREEN="\033[0;32m"
-RED="\033[0;31m"
-BLUE="\033[0;34m"
-NC="\033[0m" # No Color
+# --- Цвета (поддержка ANSI только там, где есть) ---
+if [ -t 1 ] && command -v tput >/dev/null 2>&1 && [ "$(tput colors)" -ge 8 ]; then
+    GREEN="$(tput setaf 2)"
+    RED="$(tput setaf 1)"
+    BLUE="$(tput setaf 4)"
+    NC="$(tput sgr0)"
+else
+    GREEN=""
+    RED=""
+    BLUE=""
+    NC=""
+fi
 
 echo "== AmneziaWG installer =="
 
+# --- OpenWrt информация ---
 OPENWRT_VERSION=$(grep DISTRIB_RELEASE /etc/openwrt_release | cut -d\' -f2)
 OPENWRT_TARGET=$(grep DISTRIB_TARGET /etc/openwrt_release | cut -d\' -f2)
 ARCH=$(grep DISTRIB_ARCH /etc/openwrt_release | cut -d\' -f2)
@@ -36,6 +45,7 @@ if apk info kmod-amneziawg >/dev/null 2>&1; then
 fi
 
 RELEASE_URL="https://github.com/Reidenshi-san/awg-openwrt/releases/download/$RELEASE_TAG"
+
 PACKAGES="
 kmod-amneziawg
 amneziawg-tools
@@ -47,13 +57,14 @@ TMPDIR="$(mktemp -d)"
 cleanup() { rm -rf "$TMPDIR"; }
 trap cleanup EXIT
 
+# --- Spinner (BusyBox safe) ---
 spinner() {
     local pid=$1
     local spinstr='|/-\'
     while kill -0 $pid 2>/dev/null; do
         for i in $(seq 0 3); do
             echo -ne "\b${spinstr:$i:1}"
-            sleep 1  # <- тут целая секунда
+            sleep 1
         done
     done
     echo -ne "\b"
@@ -86,9 +97,9 @@ install_with_spinner() {
 }
 
 APK_FILES=""
+FOUND_ANY=0
 
 echo "== Resolving packages =="
-FOUND_ANY=0
 for pkg in $PACKAGES; do
     FILE1="${pkg}_${OPENWRT_VERSION}__mediatek_filogic.apk"
     FILE2="${pkg}_v${OPENWRT_VERSION}__mediatek_filogic.apk"
@@ -128,7 +139,7 @@ case "$answer" in
         reboot
         ;;
     *)
-        echo "Reboot skipped. Cleanup temporary files..."
+        echo "Reboot skipped. Cleaning up temporary files..."
         cleanup
         ;;
 esac

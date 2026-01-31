@@ -99,6 +99,10 @@ install_with_spinner() {
 APK_FILES=""
 FOUND_ANY=0
 
+# --- Обновляем индексы пакетов для подтягивания зависимостей ---
+echo "== Updating package index =="
+apk update
+
 echo "== Resolving packages =="
 for pkg in $PACKAGES; do
     FILE1="${pkg}_${OPENWRT_VERSION}__mediatek_filogic.apk"

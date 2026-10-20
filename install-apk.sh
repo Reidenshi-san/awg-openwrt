@@ -105,8 +105,8 @@ apk update
 
 echo "== Resolving packages =="
 for pkg in $PACKAGES; do
-    FILE1="${pkg}_${OPENWRT_VERSION}__mediatek_filogic.apk"
-    FILE2="${pkg}_v${OPENWRT_VERSION}__mediatek_filogic.apk"
+    FILE1="${pkg}_${OPENWRT_VERSION}_mediatek_filogic.apk"
+    FILE2="${pkg}_v${OPENWRT_VERSION}_mediatek_filogic.apk"
 
     if wget --spider "$RELEASE_URL/$FILE1" >/dev/null 2>&1; then
         FILE="$FILE1"
